@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import eyed3
+from eyed3.id3.frames import ImageFrame
 import requests
 from PIL import Image
 import io
@@ -11,6 +12,17 @@ import io
 
 YT = "/usr/local/bin/youtube-dl"
 TMP_DIR = "/app/tmp"
+
+
+def generate_thumbnail(path):
+    data = None
+    response = requests.get(path)
+    if response.status_code == 200:
+        data = response.content
+
+    if data is None:
+        return None
+    return handle_thumbnail(data)
 
 
 def handle_thumbnail(input_bytes):
@@ -40,6 +52,7 @@ class Video:
         self.index = None
         self.filepath = None
         self.playlist = None
+        self.album_artist = None
 
         self.format = format
 
@@ -47,6 +60,8 @@ class Video:
         self._update_channel = False
         self._update_thumbnail = False
         self._update_index = False
+        self._update_album_artist = False
+        self._update_album_thumbnail = None
 
         self._initial_save = False
 
@@ -73,11 +88,17 @@ class Video:
             self.index = index
             self._update_index = True
 
+    def set_album_artist(self, artist):
+        if artist != self.album_artist:
+            self.album_artist = artist
+            self._update_album_artist = True
+
     def update(self, video):
         self.set_title(video.title)
         self.set_channel(video.channel)
         self.set_thumbnail(video.thumbnail)
         self.set_index(video.index)
+        self.set_album_artist(video.album_artist)
 
     def sync(self, output_directory=None):
         if self.filepath is None:
@@ -121,6 +142,10 @@ class Video:
         if not os.path.isdir(output_directory):
             os.mkdir(output_directory)
 
+        command = f"mp3gain -r -c {tmp_path}"
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        result.wait()
+
         shutil.move(tmp_path, out_path)
         self.filepath = out_path
         self._initial_save = True
@@ -144,13 +169,20 @@ class Video:
             if self._initial_save or self._update_channel:
                 file.tag.artist = self.channel
             if self._initial_save or self._update_thumbnail:
+                for index in range(len(file.tag.comments)):
+                    i = file.tag.comments[index]
+                    if i.text == "thumbnail_url":
+                        file.tag.comments.pop(index)
                 file.tag.comments.set("thumbnail_url", self.thumbnail)
-                response = requests.get(self.thumbnail)
-                if response.status_code == 200:
-                    file.tag.images.set(3, handle_thumbnail(response.content), "image/png", "cover")
+                thumbnail = generate_thumbnail(self.thumbnail)
+                if thumbnail:
+                    file.tag.images.set(ImageFrame.FRONT_COVER, handle_thumbnail(thumbnail), "image/png")
 
             if self._initial_save or self._update_index:
                 file.tag.track_num = self.index
+
+            if self._initial_save or self._update_album_artist:
+                file.tag.album_artist = self.album_artist
             file.tag.save()
 
 
@@ -165,6 +197,7 @@ class YoutubeVideo(Video):
         self.index = data.get("index")
         self.filepath = None
         self.playlist = data.get("playlist_title")
+        self.album_artist = data.get("album_artist")
 
 
 class LocalVideo(Video):
@@ -176,6 +209,7 @@ class LocalVideo(Video):
             file = eyed3.load(filepath)
             self.title = file.tag.title
             self.channel = file.tag.artist
+            self.album_artist = file.tag.album_artist
 
             self.index = file.tag.track_num
             self.filepath = filepath
@@ -191,13 +225,14 @@ class LocalVideo(Video):
 
 class Playlist:
     def __init__(self, data):
+        self.album_artists = None
         self.url = data[0].strip()
         self.filepath = data[1]["filepath"]
         self.mode = 1 if data[1].get("format", "").lower() == "video" else 0
 
     def sync(self):
+        local = self.get_local_state() # Local first to take into account album artist
         remote = self.get_remote_state()
-        local = self.get_local_state()
 
         for k, v in remote.items():
             if k in local:
@@ -213,6 +248,17 @@ class Playlist:
         for _, v in local.items():
             v.sync(output_directory=self.filepath)
 
+    def add_album_artist(self, artist):
+        if artist is None:
+            return
+
+        if self.album_artists is None:
+            self.album_artists = artist
+            return
+
+        if self.album_artists != artist:
+            self.album_artists = "Various Artists"
+
     def get_remote_state(self):
         command = f"{YT} --flat-playlist -q -J --no-warnings {self.url}"
 
@@ -222,7 +268,13 @@ class Playlist:
             return None
         data = json.loads(result_raw.decode())
         title = data.get("title")
-        videos = [{**{"index": index, "playlist_title": title}, **i} for index, i in enumerate(data["entries"])]
+
+        for i in data["entries"]:
+            self.add_album_artist(i.get("channel"))
+
+        videos = [{**{"index": index,
+                      "playlist_title": title,
+                      "album_artist": self.album_artists}, **i} for index, i in enumerate(data["entries"])]
         videos = [YoutubeVideo(i, format=self.mode) for i in videos]
         videos = {i.id: i for i in videos}
         return videos
@@ -240,6 +292,7 @@ class Playlist:
             f = LocalVideo(os.path.join(self.filepath, filename))
             if f.id:
                 output[f.id] = f
+                self.add_album_artist(f.channel)
         return output
 
 

@@ -2,7 +2,7 @@ FROM python:3.12
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y ffmpeg curl cron  && \
+RUN apt-get update && apt-get install -y ffmpeg curl cron mp3gain  && \
     curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o /usr/local/bin/youtube-dl && \
     chmod a+rx /usr/local/bin/youtube-dl
 

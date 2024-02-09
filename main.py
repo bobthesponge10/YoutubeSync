@@ -90,6 +90,7 @@ class FileLock(object):
 
 
 YT = "/usr/local/bin/youtube-dl"
+MP3GAIN = "/usr/bin/mp3gain"
 TMP_DIR = "/app/tmp"
 LOCKFILE = os.path.abspath(os.path.join(os.path.dirname(__file__), "lockfile"))
 
@@ -222,8 +223,9 @@ class Video:
         if not os.path.isdir(output_directory):
             os.mkdir(output_directory)
 
-        command = f"mp3gain -r -c {tmp_path}"
-        subprocess.check_output(command)
+        command = f"{MP3GAIN} -r -c -q {tmp_path}"
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        result.wait()
 
         shutil.move(tmp_path, out_path)
         self.filepath = out_path
@@ -394,10 +396,11 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        with FileLock(LOCKFILE):
-            main()
-    except IOError:
-        print("Existing job still running")
+    if not os.path.exists(LOCKFILE):
+        with open(LOCKFILE, "w") as f:
+            f.write("stuff")
+
+    with FileLock(LOCKFILE, timeout=None):
+        main()
 
 

@@ -229,6 +229,9 @@ class Playlist:
 
     def get_local_state(self):
         output = {}
+        if not os.path.exists(self.filepath):
+            return {}
+
         for filename in os.listdir(self.filepath):
             ext = filename.split(".")[-1]
             if ext not in ["mp3", "pm4"]:

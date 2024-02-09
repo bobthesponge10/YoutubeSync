@@ -223,7 +223,7 @@ class Video:
             os.mkdir(output_directory)
 
         command = f"mp3gain -r -c {tmp_path}"
-        result = subprocess.check_output(command)
+        subprocess.check_output(command)
 
         shutil.move(tmp_path, out_path)
         self.filepath = out_path

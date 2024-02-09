@@ -1,0 +1,13 @@
+version: "3"
+services:
+  youtube-sync:
+    container_name: YoutubeSync
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      - CONFIG=config.yaml
+    volumes:
+      - ./config.yaml:/config.yaml
+      - ./music:/music
+    restart: unless-stopped

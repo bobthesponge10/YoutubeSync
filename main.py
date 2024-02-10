@@ -234,7 +234,7 @@ class Video:
 
     def save_metadata(self):
         if not (self._initial_save or self._update_title or self._update_channel or
-                self._update_thumbnail or self._update_index, self._update_album_artist):
+                self._update_thumbnail or self._update_index or self._update_album_artist):
             return
 
         if self.format == 0:

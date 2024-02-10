@@ -219,6 +219,7 @@ class Video:
 
         if not (result.returncode == 0 or result.returncode is None):
             print(f"Failed to download {self.title} : {self.id}")
+            return
 
         if not os.path.isdir(output_directory):
             os.mkdir(output_directory)

@@ -207,14 +207,14 @@ class Video:
             output_name += f" - {self.id}"
             out_path = os.path.join(output_directory, f"{output_name}.{output_ext}")
 
-        command = f"{YT} -o {tmp_path} "
+        command = f"{YT} -o {tmp_path} -q "
         if self.format == 0:
             command += f"-x --audio-format {output_ext} "
         else:
             command += f"-f {output_ext} "
         command += f"https://www.youtube.com/watch?v={self.id}"
 
-        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        result = subprocess.Popen(command, stderr=subprocess.PIPE, shell=True)
         result.wait()
 
         if not (result.returncode == 0 or result.returncode is None):
@@ -225,7 +225,7 @@ class Video:
             os.mkdir(output_directory)
 
         command = f"{MP3GAIN} -r -c -q {tmp_path}"
-        result = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+        result = subprocess.Popen(command, shell=True)
         result.wait()
 
         shutil.move(tmp_path, out_path)

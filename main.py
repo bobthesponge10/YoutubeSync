@@ -214,11 +214,11 @@ class Video:
             command += f"-f {output_ext} "
         command += f"https://www.youtube.com/watch?v={self.id}"
 
-        result = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         result.wait()
 
         if not (result.returncode == 0 or result.returncode is None):
-            print(f"Failed to download {self.title} : {self.id}")
+            print(f"Failed to download {self.title}-{self.id}: {result.stderr.read().decode()}")
             return
 
         if not os.path.isdir(output_directory):

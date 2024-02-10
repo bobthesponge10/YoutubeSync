@@ -187,8 +187,8 @@ class Video:
                 self.download(output_directory)
             else:
                 raise Exception("No directory to download to")
-
-        self.save_metadata()
+        if self.filepath is not None:
+            self.save_metadata()
 
     def download(self, output_directory):
         if not self.id:
@@ -219,7 +219,6 @@ class Video:
 
         if not (result.returncode == 0 or result.returncode is None):
             print(f"Failed to download {self.title} : {self.id}")
-            return
 
         if not os.path.isdir(output_directory):
             os.mkdir(output_directory)

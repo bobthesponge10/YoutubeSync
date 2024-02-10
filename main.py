@@ -225,7 +225,7 @@ class Video:
             os.mkdir(output_directory)
 
         command = f"{MP3GAIN} -r -c -q {tmp_path}"
-        result = subprocess.Popen(command, shell=True)
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         result.wait()
 
         shutil.move(tmp_path, out_path)

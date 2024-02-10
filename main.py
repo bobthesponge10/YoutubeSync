@@ -293,7 +293,7 @@ class LocalVideo(Video):
             self.channel = file.tag.artist
             self.album_artist = file.tag.album_artist
 
-            self.index = file.tag.track_num
+            self.index = file.tag.track_num.count
             self.filepath = filepath
             self.format = 0
             self.playlist = file.tag.album

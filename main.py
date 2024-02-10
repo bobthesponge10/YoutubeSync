@@ -214,17 +214,18 @@ class Video:
             command += f"-f {output_ext} "
         command += f"https://www.youtube.com/watch?v={self.id}"
 
-        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         result.wait()
 
         if not (result.returncode == 0 or result.returncode is None):
+            print(f"Failed to download {self.title} : {self.id}")
             return
 
         if not os.path.isdir(output_directory):
             os.mkdir(output_directory)
 
         command = f"{MP3GAIN} -r -c -q {tmp_path}"
-        result = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        result = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         result.wait()
 
         shutil.move(tmp_path, out_path)
@@ -233,7 +234,7 @@ class Video:
 
     def save_metadata(self):
         if not (self._initial_save or self._update_title or self._update_channel or
-                self._update_thumbnail or self._update_index):
+                self._update_thumbnail or self._update_index, self._update_album_artist):
             return
 
         if self.format == 0:
@@ -378,7 +379,7 @@ class Playlist:
 
 
 def main():
-    print("Starting")
+    print("Starting", flush=True)
 
     config_file = "/config.yaml"
 
@@ -392,15 +393,17 @@ def main():
     for i in playlists:
         i.sync()
 
-    print("Finished")
+    print("Finished", flush=True)
 
 
 if __name__ == "__main__":
     if not os.path.exists(LOCKFILE):
         with open(LOCKFILE, "w") as f:
             f.write("stuff")
-
-    with FileLock(LOCKFILE, timeout=None):
-        main()
-
+    
+    try:
+        with FileLock(LOCKFILE, timeout=None):
+            main()
+    except FileLockException:
+        print("Instance already running", flush=True)
 

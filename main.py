@@ -256,7 +256,7 @@ class Video:
                 for index in range(len(file.tag.comments)):
                     i = file.tag.comments[index]
                     if i.text == "thumbnail_url":
-                        file.tag.comments.remove(i)
+                        file.tag.comments.remove(i.text)
                 file.tag.comments.set("thumbnail_url", self.thumbnail)
                 thumbnail = generate_thumbnail(self.thumbnail)
                 if thumbnail:
